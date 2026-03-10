@@ -1,30 +1,25 @@
 import { useState, useCallback } from 'react';
 import { Clapperboard } from 'lucide-react';
-import ApiKeyInput from './components/ApiKeyInput';
 import ScriptInput from './components/ScriptInput';
 import SceneCard from './components/SceneCard';
 import ProgressBar from './components/ProgressBar';
 import { parseScenes, extractKeywords, buildSearchQuery } from './lib/scene-parser';
 import { searchVideos } from './lib/pexels-api';
 
+const API_KEY = import.meta.env.VITE_PEXELS_API_KEY;
+
 function App() {
-  const [apiKey, setApiKey] = useState(() => localStorage.getItem('pexels_api_key') || '');
   const [script, setScript] = useState('');
   const [scenes, setScenes] = useState([]);
   const [loading, setLoading] = useState(false);
-
-  const handleApiKeyChange = useCallback((key) => {
-    setApiKey(key);
-    localStorage.setItem('pexels_api_key', key);
-  }, []);
 
   const updateScene = useCallback((id, updates) => {
     setScenes(prev => prev.map(s => s.id === id ? { ...s, ...updates } : s));
   }, []);
 
   const handleSearch = useCallback(async () => {
-    if (!apiKey.trim()) {
-      alert('Veuillez entrer votre clé API Pexels.');
+    if (!API_KEY) {
+      alert('Variable d\'environnement VITE_PEXELS_API_KEY non configurée.');
       return;
     }
     if (!script.trim()) return;
@@ -51,7 +46,7 @@ function App() {
       updateScene(scene.id, { status: 'searching' });
 
       try {
-        const result = await searchVideos(apiKey, query, { perPage: 6, orientation: 'landscape' });
+        const result = await searchVideos(API_KEY, query, { perPage: 6, orientation: 'landscape' });
         updateScene(scene.id, {
           status: 'ready',
           videos: result.videos || [],
@@ -68,7 +63,7 @@ function App() {
     }
 
     setLoading(false);
-  }, [apiKey, script, updateScene]);
+  }, [script, updateScene]);
 
   return (
     <div className="min-h-screen bg-slate-900 text-white">
@@ -91,9 +86,6 @@ function App() {
       </header>
 
       <main className="max-w-5xl mx-auto px-6 py-8 space-y-8">
-        {/* API Key */}
-        <ApiKeyInput apiKey={apiKey} onChange={handleApiKeyChange} />
-
         {/* Script Input */}
         <ScriptInput
           value={script}
