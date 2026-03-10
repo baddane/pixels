@@ -1,0 +1,135 @@
+{
+  "app": {
+    "name": "VideoMaker Script",
+    "version": "1.0.0",
+    "description": "Convertissez votre script en vidéos stock automatiquement",
+    "author": "Created with Claude",
+    "license": "MIT"
+  },
+  "limits": {
+    "maxScenes": 10,
+    "maxKeywordsPerScene": 5,
+    "maxVideosPerScene": 5,
+    "maxScriptLength": 5000,
+    "supportedFormats": [".txt", ".md", ".pdf"]
+  },
+  "api": {
+    "pexels": {
+      "baseUrl": "https://api.pexels.com/videos",
+      "endpoints": {
+        "search": "/search",
+        "popular": "/popular"
+      },
+      "rateLimit": {
+        "requestsPerHour": 200,
+        "requestsPerDay": 2000,
+        "delayBetweenRequests": 500
+      },
+      "defaultParams": {
+        "per_page": 5,
+        "page": 1
+      }
+    },
+    "claude": {
+      "baseUrl": "https://api.anthropic.com/v1",
+      "model": "claude-sonnet-4-20250514",
+      "maxTokens": 300,
+      "temperature": 0.7
+    }
+  },
+  "extraction": {
+    "scenePatterns": [
+      "SCENE\\s*(\\d+)",
+      "SCÈNE\\s*(\\d+)",
+      "Scene\\s*(\\d+)"
+    ],
+    "keywords": {
+      "minLength": 3,
+      "maxLength": 5,
+      "language": "en"
+    },
+    "prompts": {
+      "keywordExtraction": "Extrait 3-5 mots-clés pertinents (séparés par des virgules) pour rechercher des vidéos stock de cette scène. Sois concis et spécifique:\n\n{SCENE_CONTENT}"
+    }
+  },
+  "ui": {
+    "theme": "dark",
+    "colors": {
+      "primary": "#06b6d4",
+      "secondary": "#3b82f6",
+      "success": "#10b981",
+      "warning": "#f59e0b",
+      "danger": "#ef4444",
+      "background": "#0f172a",
+      "surface": "#1e293b"
+    },
+    "animation": {
+      "duration": 300,
+      "easing": "ease-in-out"
+    }
+  },
+  "features": {
+    "fileUpload": true,
+    "apiKeyStorage": "session",
+    "caching": true,
+    "retryFailed": true,
+    "batchProcessing": true,
+    "downloadTracking": false
+  },
+  "messages": {
+    "fr": {
+      "welcome": "Convertissez votre script en vidéos stock en 5 étapes",
+      "uploadHint": "Collez votre script ici ou utilisez un fichier...",
+      "analyzing": "Analyse en cours...",
+      "extracting": "Extraction des mots-clés",
+      "searching": "Recherche de vidéos",
+      "ready": "Prêt à télécharger",
+      "errors": {
+        "noScenes": "Aucune scène détectée",
+        "noKeywords": "Impossible d'extraire les mots-clés",
+        "noVideos": "Aucune vidéo trouvée pour cette requête",
+        "invalidApiKey": "Clé API invalide"
+      }
+    },
+    "en": {
+      "welcome": "Convert your script to stock videos in 5 steps",
+      "uploadHint": "Paste your script here or use a file...",
+      "analyzing": "Analyzing...",
+      "extracting": "Extracting keywords",
+      "searching": "Searching for videos",
+      "ready": "Ready to download",
+      "errors": {
+        "noScenes": "No scenes detected",
+        "noKeywords": "Unable to extract keywords",
+        "noVideos": "No videos found for this query",
+        "invalidApiKey": "Invalid API key"
+      }
+    }
+  },
+  "download": {
+    "autoNaming": true,
+    "nameFormat": "scene_{SCENE_ID}_{VIDEO_ID}.mp4",
+    "defaultQuality": "hd",
+    "minDuration": 3,
+    "maxDuration": 60
+  },
+  "analytics": {
+    "enabled": false,
+    "trackingId": null,
+    "events": [
+      "app_loaded",
+      "script_uploaded",
+      "scene_detected",
+      "keywords_extracted",
+      "video_searched",
+      "video_downloaded"
+    ]
+  },
+  "advanced": {
+    "useBackend": false,
+    "backendUrl": "http://localhost:3000",
+    "enableIndexedDB": false,
+    "enableServiceWorker": false,
+    "corsProxy": null
+  }
+}
