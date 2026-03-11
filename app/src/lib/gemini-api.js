@@ -31,6 +31,23 @@ Règles :
 - Les mots-clés doivent être concrets et visuels (pas de concepts abstraits)
 - Chaque scène doit avoir une description visuelle claire
 
+Règles STRICTES pour le script audio (optimisé Text-to-Speech) :
+- Écris des phrases courtes et simples (max 20 mots par phrase)
+- Une seule idée par phrase, jamais de phrases à rallonge
+- Utilise le POINT (.) pour les fins de phrase — il crée une pause naturelle
+- Utilise la VIRGULE (,) uniquement pour des pauses courtes et nécessaires
+- Utilise les POINTS DE SUSPENSION (...) pour les pauses dramatiques ou les transitions
+- N'utilise JAMAIS de tirets (—, –), de barres obliques (/), de parenthèses () ou de crochets []
+- N'utilise JAMAIS d'abréviations : écris "c'est-à-dire" au lieu de "c.à.d", "numéro" au lieu de "n°", "pourcentage" au lieu de "%"
+- Écris tous les nombres EN TOUTES LETTRES : "trois millions" pas "3 000 000", "vingt-cinq" pas "25"
+- Écris les sigles lettre par lettre avec des points : "I.A." pas "IA", "O.N.U." pas "ONU"
+- N'utilise JAMAIS de caractères spéciaux : *, #, @, &, =, +, <, >
+- N'utilise JAMAIS de listes à puces ou numérotées dans le script
+- N'utilise JAMAIS de gras (**), d'italique ou de formatage markdown
+- Évite les mots difficiles à prononcer ou les termes trop techniques sans les expliquer
+- Préfère les mots courants et naturels à l'oral
+- Termine chaque segment de narration par un point final
+
 ARTICLE :
 ${articleText}`;
 
