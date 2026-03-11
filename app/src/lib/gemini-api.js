@@ -38,14 +38,22 @@ STRUCTURE :
 - Le script total doit faire au minimum ${minWords} mots. C'est crucial.
 - Les mots-clés doivent être en ANGLAIS, concrets et visuels pour la recherche Pexels.
 
-STYLE DE NARRATION (optimisé pour synthèse vocale) :
-- Phrases courtes, maximum vingt mots. Une idée par phrase.
-- Ponctuation simple : point final pour les pauses, virgule pour les courtes respirations, points de suspension pour les transitions dramatiques.
-- Aucun tiret, parenthèse, crochet, barre oblique.
-- Aucune abréviation. Écris les mots en entier : "c'est-à-dire" et non "c.à.d", "numéro" et non "n°".
-- Nombres en toutes lettres : "trois millions" et non "3 000 000".
-- Sigles épelés avec des points : "I.A." et non "IA".
-- Aucun caractère spécial, aucun formatage markdown, aucune liste à puces.
+Règles STRICTES pour le script audio (optimisé Text-to-Speech) :
+- Écris des phrases courtes et simples, maximum vingt mots par phrase.
+- Une seule idée par phrase, jamais de phrases à rallonge.
+- Utilise le POINT pour les fins de phrase, il crée une pause naturelle.
+- Utilise la VIRGULE uniquement pour des pauses courtes et nécessaires.
+- Utilise les POINTS DE SUSPENSION pour les pauses dramatiques ou les transitions.
+- N'utilise JAMAIS de tirets, de barres obliques, de parenthèses ou de crochets.
+- N'utilise JAMAIS d'abréviations : écris "c'est-à-dire" au lieu de "c.à.d", "numéro" au lieu de "n°", "pourcentage" au lieu de "%".
+- Écris tous les nombres EN TOUTES LETTRES : "trois millions" pas "3 000 000", "vingt-cinq" pas "25".
+- Écris les sigles lettre par lettre avec des points : "I.A." pas "IA", "O.N.U." pas "ONU".
+- N'utilise JAMAIS de caractères spéciaux : *, #, @, &, =, +, <, >.
+- N'utilise JAMAIS de listes à puces ou numérotées dans le script.
+- N'utilise JAMAIS de gras, d'italique ou de formatage markdown.
+- Évite les mots difficiles à prononcer ou les termes trop techniques sans les expliquer.
+- Préfère les mots courants et naturels à l'oral.
+- Termine chaque segment de narration par un point final.
 - Ton engageant, fluide, naturel à l'oral.
 
 ARTICLE :
