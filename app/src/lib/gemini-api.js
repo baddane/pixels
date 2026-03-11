@@ -5,11 +5,19 @@ const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta';
  * Returns an object with { script, scenes } where scenes is an array of { number, content, keywords[] }.
  */
 export async function generateScriptAndScenes(apiKey, articleText) {
+  // Dynamic scaling based on article length (~150 words/min narration, ~1 scene per 40s)
+  const wordCount = articleText.trim().split(/\s+/).length;
+  const targetMinutes = Math.max(3, Math.min(15, Math.round(wordCount / 150)));
+  const minScenes = Math.max(5, Math.round(targetMinutes * 1.5));
+  const maxScenes = Math.min(30, Math.round(targetMinutes * 2.5));
+  const minWords = targetMinutes * 150;
+  const maxTokens = targetMinutes <= 5 ? 8192 : 16384;
+
   const prompt = `Tu es un expert en création de contenu vidéo YouTube.
 
-OBJECTIF : Transformer l'article ci-dessous en un script vidéo COMPLET et DÉTAILLÉ de trois à cinq minutes de narration, découpé en scènes visuelles.
+OBJECTIF : Transformer l'article ci-dessous en un script vidéo COMPLET et DÉTAILLÉ de ${targetMinutes} minutes de narration, découpé en scènes visuelles.
 
-IMPORTANT : Le script DOIT couvrir TOUT le contenu de l'article. Ne résume pas, développe chaque point. Le champ "script" doit contenir le texte intégral de la narration. Chaque scène contient un morceau de cette narration dans "narration".
+IMPORTANT : Le script DOIT couvrir TOUT le contenu de l'article. Ne résume pas, développe chaque point. Enrichis et développe les idées pour atteindre la durée cible. Le champ "script" doit contenir le texte intégral de la narration. Chaque scène contient un morceau de cette narration dans "narration".
 
 FORMAT DE SORTIE : JSON valide uniquement, sans markdown, sans backticks.
 {
@@ -25,9 +33,9 @@ FORMAT DE SORTIE : JSON valide uniquement, sans markdown, sans backticks.
 }
 
 STRUCTURE :
-- Génère entre huit et douze scènes.
-- Chaque scène doit avoir trois à huit phrases de narration.
-- Le script total doit faire au minimum six cents mots.
+- Génère entre ${minScenes} et ${maxScenes} scènes.
+- Chaque scène doit avoir quatre à dix phrases de narration.
+- Le script total doit faire au minimum ${minWords} mots. C'est crucial.
 - Les mots-clés doivent être en ANGLAIS, concrets et visuels pour la recherche Pexels.
 
 STYLE DE NARRATION (optimisé pour synthèse vocale) :
@@ -52,7 +60,7 @@ ${articleText}`;
         contents: [{ parts: [{ text: prompt }] }],
         generationConfig: {
           temperature: 0.7,
-          maxOutputTokens: 8192,
+          maxOutputTokens: maxTokens,
         },
       }),
     }
