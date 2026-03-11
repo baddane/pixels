@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { Clapperboard, Key } from 'lucide-react';
 import ArticleInput from './components/ArticleInput';
 import GeneratedScript from './components/GeneratedScript';
+import PodcastScript from './components/PodcastScript';
 import SceneCard from './components/SceneCard';
 import ProgressBar from './components/ProgressBar';
 import ApiKeysModal from './components/ApiKeysModal';
@@ -24,6 +25,7 @@ function App() {
 
   const [article, setArticle] = useState('');
   const [generatedScript, setGeneratedScript] = useState('');
+  const [podcastDialogue, setPodcastDialogue] = useState([]);
   const [scenes, setScenes] = useState([]);
   const [step, setStep] = useState('input'); // input | generating | searching | done
   const [error, setError] = useState(null);
@@ -79,11 +81,13 @@ function App() {
     setStep('generating');
     setScenes([]);
     setGeneratedScript('');
+    setPodcastDialogue([]);
 
     try {
-      // Step 1: Gemini generates script + scenes + keywords
+      // Step 1: Gemini generates script + scenes + keywords + podcast
       const result = await generateScriptAndScenes(geminiKey, article);
       setGeneratedScript(result.script);
+      setPodcastDialogue(result.podcast || []);
 
       const sceneList = result.scenes.map((s, idx) => ({
         id: `scene-${idx}`,
@@ -153,6 +157,7 @@ function App() {
   const handleReset = () => {
     setArticle('');
     setGeneratedScript('');
+    setPodcastDialogue([]);
     setScenes([]);
     setStep('input');
     setError(null);
@@ -235,6 +240,9 @@ function App() {
 
         {/* Generated Script */}
         {generatedScript && <GeneratedScript script={generatedScript} />}
+
+        {/* Podcast Dialogue */}
+        {podcastDialogue.length > 0 && <PodcastScript dialogue={podcastDialogue} />}
 
         {/* Progress */}
         {scenes.length > 0 && <ProgressBar scenes={scenes} />}
