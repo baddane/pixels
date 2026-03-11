@@ -75,6 +75,7 @@ Règles STRICTES pour le script audio ET le podcast (optimisé Text-to-Speech) :
 - Préfère les mots courants et naturels à l'oral.
 - Termine chaque segment de narration par un point final.
 - Ton engageant, fluide, naturel à l'oral.
+- IMPORTANT pour le script : sépare le texte en paragraphes thématiques avec des sauts de ligne. Chaque changement de sujet ou de section doit commencer un nouveau paragraphe. Utilise le caractère antislash n antislash n pour séparer les paragraphes dans le JSON.
 
 ARTICLE :
 ${articleText}`;
