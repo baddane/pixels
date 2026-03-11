@@ -1,11 +1,27 @@
 import { useState, useRef } from 'react';
-import { Search, Play, ExternalLink, Download, ChevronDown, ChevronUp, Loader2, AlertCircle, Tag } from 'lucide-react';
+import { Search, Play, ExternalLink, Download, ChevronDown, ChevronUp, Loader2, AlertCircle, Tag, Sparkles, Film } from 'lucide-react';
 import { getBestVideoFile } from '../lib/pexels-api';
 
-function VideoThumbnail({ video, onSelect }) {
+function SourceBadge({ source }) {
+  if (source === 'runway') {
+    return (
+      <div className="absolute top-1 left-1 flex items-center gap-1 bg-purple-600/80 text-white text-xs px-1.5 py-0.5 rounded">
+        <Sparkles className="w-3 h-3" /> IA
+      </div>
+    );
+  }
+  return (
+    <div className="absolute top-1 left-1 flex items-center gap-1 bg-cyan-600/80 text-white text-xs px-1.5 py-0.5 rounded">
+      <Film className="w-3 h-3" /> Stock
+    </div>
+  );
+}
+
+function VideoThumbnail({ video, onSelect, showSource }) {
   const videoRef = useRef(null);
   const [hovering, setHovering] = useState(false);
   const bestFile = getBestVideoFile(video);
+  const isRunway = video.source === 'runway';
 
   return (
     <div
@@ -29,17 +45,30 @@ function VideoThumbnail({ video, onSelect }) {
           playsInline
           className="w-full h-36 object-cover"
         />
-      ) : (
+      ) : isRunway && bestFile ? (
+        <video
+          src={bestFile.link}
+          muted
+          playsInline
+          className="w-full h-36 object-cover"
+        />
+      ) : video.image ? (
         <img
           src={video.image}
           alt={`Video ${video.id}`}
           className="w-full h-36 object-cover"
         />
+      ) : (
+        <div className="w-full h-36 flex items-center justify-center bg-gradient-to-br from-purple-900/50 to-slate-800">
+          <Sparkles className="w-8 h-8 text-purple-400" />
+        </div>
       )}
 
       <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all flex items-center justify-center">
         <Play className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow-lg" />
       </div>
+
+      {showSource && <SourceBadge source={video.source} />}
 
       <div className="absolute bottom-1 right-1 bg-black/70 text-white text-xs px-1.5 py-0.5 rounded">
         {video.duration}s
@@ -135,7 +164,15 @@ export default function SceneCard({ scene }) {
       {/* Body */}
       {expanded && (
         <div className="px-5 pb-5 space-y-4">
-          {/* Scene description */}
+          {/* Narration */}
+          {scene.narration && (
+            <div className="bg-slate-800/80 rounded-lg p-3 border-l-2 border-cyan-500/50">
+              <p className="text-xs font-semibold text-cyan-400 mb-1">Narration</p>
+              <p className="text-slate-300 text-sm leading-relaxed">{scene.narration}</p>
+            </div>
+          )}
+
+          {/* Visual description */}
           <p className="text-slate-400 text-sm leading-relaxed">{scene.content}</p>
 
           {/* Keywords */}
@@ -162,7 +199,7 @@ export default function SceneCard({ scene }) {
           {scene.status === 'searching' && (
             <div className="flex items-center gap-2 text-cyan-400 text-sm">
               <Loader2 className="w-4 h-4 animate-spin" />
-              Recherche sur Pexels...
+              Recherche de vidéos...
             </div>
           )}
 
@@ -179,6 +216,7 @@ export default function SceneCard({ scene }) {
                   key={video.id}
                   video={video}
                   onSelect={setSelectedVideo}
+                  showSource={scene.videos.some(v => v.source === 'runway') && scene.videos.some(v => v.source === 'pexels')}
                 />
               ))}
             </div>
