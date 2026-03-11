@@ -7,10 +7,19 @@ import ProgressBar from './components/ProgressBar';
 import ApiKeysModal from './components/ApiKeysModal';
 import { generateScriptAndScenes } from './lib/gemini-api';
 import { searchVideos } from './lib/pexels-api';
+import { generateVideoForScene } from './lib/runway-api';
 
 function App() {
   const [geminiKey, setGeminiKey] = useState(import.meta.env.VITE_GEMINI_API_KEY || '');
   const [pexelsKey, setPexelsKey] = useState(import.meta.env.VITE_PEXELS_API_KEY || '');
+  const [runwayKey, setRunwayKey] = useState(import.meta.env.VITE_RUNWAY_API_KEY || '');
+  const [videoSource, setVideoSource] = useState(() => {
+    const hasRunway = !!import.meta.env.VITE_RUNWAY_API_KEY;
+    const hasPexels = !!import.meta.env.VITE_PEXELS_API_KEY;
+    if (hasRunway && hasPexels) return 'both';
+    if (hasRunway) return 'runway';
+    return 'pexels';
+  });
   const [showKeysModal, setShowKeysModal] = useState(false);
 
   const [article, setArticle] = useState('');
@@ -19,14 +28,48 @@ function App() {
   const [step, setStep] = useState('input'); // input | generating | searching | done
   const [error, setError] = useState(null);
 
-  const keysConfigured = !!(geminiKey && pexelsKey);
+  const needsPexels = videoSource === 'pexels' || videoSource === 'both';
+  const needsRunway = videoSource === 'runway' || videoSource === 'both';
+  const keysConfigured = geminiKey && (!needsPexels || pexelsKey) && (!needsRunway || runwayKey);
 
   const updateScene = useCallback((id, updates) => {
     setScenes(prev => prev.map(s => s.id === id ? { ...s, ...updates } : s));
   }, []);
 
+  const searchPexelsForScene = async (scene) => {
+    const query = scene.keywords.join(' ');
+    const result = await searchVideos(pexelsKey, query, {
+      perPage: 6,
+      orientation: 'landscape',
+    });
+    return (result.videos || []).map(v => ({ ...v, source: 'pexels' }));
+  };
+
+  const generateRunwayForScene = async (scene) => {
+    const result = await generateVideoForScene(runwayKey, scene);
+    return [{
+      id: result.id,
+      url: result.url,
+      image: '', // no thumbnail for generated videos
+      duration: result.duration,
+      width: 1280,
+      height: 720,
+      source: 'runway',
+      prompt: result.prompt,
+      video_files: [{
+        id: result.id,
+        quality: 'hd',
+        type: 'video/mp4',
+        width: 1280,
+        height: 720,
+        link: result.url,
+      }],
+      user: { name: 'Runway AI' },
+    }];
+  };
+
   const handleGenerate = useCallback(async () => {
-    if (!geminiKey || !pexelsKey) {
+    if (!keysConfigured) {
       setShowKeysModal(true);
       return;
     }
@@ -42,7 +85,6 @@ function App() {
       const result = await generateScriptAndScenes(geminiKey, article);
       setGeneratedScript(result.script);
 
-      // Build scenes state from Gemini result
       const sceneList = result.scenes.map((s, idx) => ({
         id: `scene-${idx}`,
         number: s.number || idx + 1,
@@ -57,19 +99,38 @@ function App() {
       setScenes(sceneList);
       setStep('searching');
 
-      // Step 2: Search Pexels for each scene
+      // Step 2: Search/generate videos for each scene
       for (const scene of sceneList) {
-        const query = scene.keywords.join(' ');
         updateScene(scene.id, { status: 'searching' });
 
         try {
-          const searchResult = await searchVideos(pexelsKey, query, {
-            perPage: 6,
-            orientation: 'landscape',
-          });
+          let videos = [];
+
+          if (videoSource === 'pexels') {
+            videos = await searchPexelsForScene(scene);
+          } else if (videoSource === 'runway') {
+            videos = await generateRunwayForScene(scene);
+          } else {
+            // Both: Pexels first, then Runway in parallel
+            const [pexelsVideos, runwayVideos] = await Promise.allSettled([
+              searchPexelsForScene(scene),
+              generateRunwayForScene(scene),
+            ]);
+
+            if (pexelsVideos.status === 'fulfilled') videos.push(...pexelsVideos.value);
+            if (runwayVideos.status === 'fulfilled') videos.push(...runwayVideos.value);
+
+            if (videos.length === 0) {
+              const errors = [];
+              if (pexelsVideos.status === 'rejected') errors.push(`Pexels: ${pexelsVideos.reason.message}`);
+              if (runwayVideos.status === 'rejected') errors.push(`Runway: ${runwayVideos.reason.message}`);
+              if (errors.length) throw new Error(errors.join(' | '));
+            }
+          }
+
           updateScene(scene.id, {
             status: 'ready',
-            videos: searchResult.videos || [],
+            videos,
           });
         } catch (err) {
           updateScene(scene.id, {
@@ -78,7 +139,8 @@ function App() {
           });
         }
 
-        await new Promise(r => setTimeout(r, 300));
+        // Small delay between scenes (mainly for Pexels rate limiting)
+        if (needsPexels) await new Promise(r => setTimeout(r, 300));
       }
 
       setStep('done');
@@ -86,7 +148,7 @@ function App() {
       setError(err.message);
       setStep('input');
     }
-  }, [article, geminiKey, pexelsKey, updateScene]);
+  }, [article, geminiKey, pexelsKey, runwayKey, videoSource, keysConfigured, updateScene]);
 
   const handleReset = () => {
     setArticle('');
@@ -96,6 +158,8 @@ function App() {
     setError(null);
   };
 
+  const sourceLabel = videoSource === 'both' ? 'Pexels + Runway' : videoSource === 'runway' ? 'Runway AI' : 'Pexels';
+
   return (
     <div className="min-h-screen bg-slate-900 text-white">
       {/* API Keys Modal */}
@@ -103,8 +167,12 @@ function App() {
         <ApiKeysModal
           geminiKey={geminiKey}
           pexelsKey={pexelsKey}
+          runwayKey={runwayKey}
           onGeminiKeyChange={setGeminiKey}
           onPexelsKeyChange={setPexelsKey}
+          onRunwayKeyChange={setRunwayKey}
+          videoSource={videoSource}
+          onVideoSourceChange={setVideoSource}
           onClose={() => setShowKeysModal(false)}
         />
       )}
@@ -130,10 +198,7 @@ function App() {
               <span className={`w-2 h-2 rounded-full ${keysConfigured ? 'bg-green-400' : 'bg-red-400'}`} />
             </button>
             <p className="text-xs text-slate-500 hidden sm:block">
-              Vidéos par{' '}
-              <a href="https://www.pexels.com" target="_blank" rel="noopener noreferrer" className="text-cyan-500 hover:underline">
-                Pexels
-              </a>
+              Source : {sourceLabel}
             </p>
           </div>
         </div>
@@ -148,7 +213,7 @@ function App() {
           <span className="text-slate-700">&rarr;</span>
           <StepBadge num={3} label="Scènes & Mots-clés" active={step === 'searching'} done={step === 'done'} />
           <span className="text-slate-700">&rarr;</span>
-          <StepBadge num={4} label="Vidéos Pexels" active={step === 'done'} done={false} />
+          <StepBadge num={4} label={`Vidéos ${sourceLabel}`} active={step === 'done'} done={false} />
         </div>
 
         {/* Error */}
@@ -189,10 +254,18 @@ function App() {
         {/* Attribution */}
         {scenes.some(s => s.videos.length > 0) && (
           <footer className="text-center text-xs text-slate-600 pt-4 border-t border-slate-800">
-            Photos et vidéos fournies par{' '}
-            <a href="https://www.pexels.com" target="_blank" rel="noopener noreferrer" className="text-cyan-600 hover:underline">
-              Pexels
-            </a>
+            Vidéos fournies par{' '}
+            {needsPexels && (
+              <a href="https://www.pexels.com" target="_blank" rel="noopener noreferrer" className="text-cyan-600 hover:underline">
+                Pexels
+              </a>
+            )}
+            {needsPexels && needsRunway && ' & '}
+            {needsRunway && (
+              <a href="https://runwayml.com" target="_blank" rel="noopener noreferrer" className="text-purple-500 hover:underline">
+                Runway AI
+              </a>
+            )}
           </footer>
         )}
       </main>
