@@ -135,7 +135,15 @@ export default function SceneCard({ scene }) {
       {/* Body */}
       {expanded && (
         <div className="px-5 pb-5 space-y-4">
-          {/* Scene description */}
+          {/* Narration */}
+          {scene.narration && (
+            <div className="bg-slate-800/80 rounded-lg p-3 border-l-2 border-cyan-500/50">
+              <p className="text-xs font-semibold text-cyan-400 mb-1">Narration</p>
+              <p className="text-slate-300 text-sm leading-relaxed">{scene.narration}</p>
+            </div>
+          )}
+
+          {/* Visual description */}
           <p className="text-slate-400 text-sm leading-relaxed">{scene.content}</p>
 
           {/* Keywords */}

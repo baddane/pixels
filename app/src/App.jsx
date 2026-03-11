@@ -1,72 +1,114 @@
 import { useState, useCallback } from 'react';
-import { Clapperboard } from 'lucide-react';
-import ScriptInput from './components/ScriptInput';
+import { Clapperboard, Key } from 'lucide-react';
+import ArticleInput from './components/ArticleInput';
+import GeneratedScript from './components/GeneratedScript';
 import SceneCard from './components/SceneCard';
 import ProgressBar from './components/ProgressBar';
-import { parseScenes, extractKeywords, buildSearchQuery } from './lib/scene-parser';
+import ApiKeysModal from './components/ApiKeysModal';
+import { generateScriptAndScenes } from './lib/gemini-api';
 import { searchVideos } from './lib/pexels-api';
 
-const API_KEY = import.meta.env.VITE_PEXELS_API_KEY;
-
 function App() {
-  const [script, setScript] = useState('');
+  const [geminiKey, setGeminiKey] = useState(import.meta.env.VITE_GEMINI_API_KEY || '');
+  const [pexelsKey, setPexelsKey] = useState(import.meta.env.VITE_PEXELS_API_KEY || '');
+  const [showKeysModal, setShowKeysModal] = useState(false);
+
+  const [article, setArticle] = useState('');
+  const [generatedScript, setGeneratedScript] = useState('');
   const [scenes, setScenes] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [step, setStep] = useState('input'); // input | generating | searching | done
+  const [error, setError] = useState(null);
+
+  const keysConfigured = !!(geminiKey && pexelsKey);
 
   const updateScene = useCallback((id, updates) => {
     setScenes(prev => prev.map(s => s.id === id ? { ...s, ...updates } : s));
   }, []);
 
-  const handleSearch = useCallback(async () => {
-    if (!API_KEY) {
-      alert('Variable d\'environnement VITE_PEXELS_API_KEY non configurée.');
+  const handleGenerate = useCallback(async () => {
+    if (!geminiKey || !pexelsKey) {
+      setShowKeysModal(true);
       return;
     }
-    if (!script.trim()) return;
+    if (!article.trim()) return;
 
-    setLoading(true);
+    setError(null);
+    setStep('generating');
+    setScenes([]);
+    setGeneratedScript('');
 
-    // Parse scenes
-    const parsed = parseScenes(script);
+    try {
+      // Step 1: Gemini generates script + scenes + keywords
+      const result = await generateScriptAndScenes(geminiKey, article);
+      setGeneratedScript(result.script);
 
-    // Extract keywords for each scene
-    const withKeywords = parsed.map(scene => ({
-      ...scene,
-      keywords: extractKeywords(scene.content),
-      status: 'pending',
-      videos: [],
-      error: null,
-    }));
+      // Build scenes state from Gemini result
+      const sceneList = result.scenes.map((s, idx) => ({
+        id: `scene-${idx}`,
+        number: s.number || idx + 1,
+        content: s.visual,
+        narration: s.narration,
+        keywords: s.keywords || [],
+        status: 'pending',
+        videos: [],
+        error: null,
+      }));
 
-    setScenes(withKeywords);
+      setScenes(sceneList);
+      setStep('searching');
 
-    // Search Pexels for each scene sequentially (to respect rate limits)
-    for (const scene of withKeywords) {
-      const query = buildSearchQuery(scene.keywords);
-      updateScene(scene.id, { status: 'searching' });
+      // Step 2: Search Pexels for each scene
+      for (const scene of sceneList) {
+        const query = scene.keywords.join(' ');
+        updateScene(scene.id, { status: 'searching' });
 
-      try {
-        const result = await searchVideos(API_KEY, query, { perPage: 6, orientation: 'landscape' });
-        updateScene(scene.id, {
-          status: 'ready',
-          videos: result.videos || [],
-        });
-      } catch (err) {
-        updateScene(scene.id, {
-          status: 'error',
-          error: err.message,
-        });
+        try {
+          const searchResult = await searchVideos(pexelsKey, query, {
+            perPage: 6,
+            orientation: 'landscape',
+          });
+          updateScene(scene.id, {
+            status: 'ready',
+            videos: searchResult.videos || [],
+          });
+        } catch (err) {
+          updateScene(scene.id, {
+            status: 'error',
+            error: err.message,
+          });
+        }
+
+        await new Promise(r => setTimeout(r, 300));
       }
 
-      // Small delay between requests to be respectful of rate limits
-      await new Promise(r => setTimeout(r, 300));
+      setStep('done');
+    } catch (err) {
+      setError(err.message);
+      setStep('input');
     }
+  }, [article, geminiKey, pexelsKey, updateScene]);
 
-    setLoading(false);
-  }, [script, updateScene]);
+  const handleReset = () => {
+    setArticle('');
+    setGeneratedScript('');
+    setScenes([]);
+    setStep('input');
+    setError(null);
+  };
 
   return (
     <div className="min-h-screen bg-slate-900 text-white">
+      {/* API Keys Modal */}
+      {showKeysModal && (
+        <ApiKeysModal
+          geminiKey={geminiKey}
+          pexelsKey={pexelsKey}
+          onGeminiKeyChange={setGeminiKey}
+          onPexelsKeyChange={setPexelsKey}
+          onClose={() => setShowKeysModal(false)}
+        />
+      )}
+
       {/* Header */}
       <header className="border-b border-slate-800 bg-slate-900/80 backdrop-blur-sm sticky top-0 z-10">
         <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
@@ -76,23 +118,58 @@ function App() {
               Pexels <span className="text-cyan-400">Video Scenes</span>
             </h1>
           </div>
-          <p className="text-xs text-slate-500 hidden sm:block">
-            Vidéos fournies par{' '}
-            <a href="https://www.pexels.com" target="_blank" rel="noopener noreferrer" className="text-cyan-500 hover:underline">
-              Pexels
-            </a>
-          </p>
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => setShowKeysModal(true)}
+              className="flex items-center gap-2 text-sm text-slate-400 hover:text-white transition-colors"
+            >
+              <Key className="w-4 h-4" />
+              <span className="hidden sm:inline">
+                {keysConfigured ? 'API configurées' : 'Configurer les API'}
+              </span>
+              <span className={`w-2 h-2 rounded-full ${keysConfigured ? 'bg-green-400' : 'bg-red-400'}`} />
+            </button>
+            <p className="text-xs text-slate-500 hidden sm:block">
+              Vidéos par{' '}
+              <a href="https://www.pexels.com" target="_blank" rel="noopener noreferrer" className="text-cyan-500 hover:underline">
+                Pexels
+              </a>
+            </p>
+          </div>
         </div>
       </header>
 
       <main className="max-w-5xl mx-auto px-6 py-8 space-y-8">
-        {/* Script Input */}
-        <ScriptInput
-          value={script}
-          onChange={setScript}
-          onSubmit={handleSearch}
-          loading={loading}
+        {/* Steps indicator */}
+        <div className="flex items-center gap-2 text-xs text-slate-500 flex-wrap">
+          <StepBadge num={1} label="Coller l'article" active={step === 'input'} done={step !== 'input'} />
+          <span className="text-slate-700">&rarr;</span>
+          <StepBadge num={2} label="Script audio IA" active={step === 'generating'} done={['searching', 'done'].includes(step)} />
+          <span className="text-slate-700">&rarr;</span>
+          <StepBadge num={3} label="Scènes & Mots-clés" active={step === 'searching'} done={step === 'done'} />
+          <span className="text-slate-700">&rarr;</span>
+          <StepBadge num={4} label="Vidéos Pexels" active={step === 'done'} done={false} />
+        </div>
+
+        {/* Error */}
+        {error && (
+          <div className="bg-red-500/10 border border-red-500/30 text-red-400 rounded-lg px-4 py-3 text-sm">
+            {error}
+          </div>
+        )}
+
+        {/* Article Input */}
+        <ArticleInput
+          value={article}
+          onChange={setArticle}
+          onSubmit={handleGenerate}
+          loading={step === 'generating' || step === 'searching'}
+          onReset={handleReset}
+          showReset={step === 'done'}
         />
+
+        {/* Generated Script */}
+        {generatedScript && <GeneratedScript script={generatedScript} />}
 
         {/* Progress */}
         {scenes.length > 0 && <ProgressBar scenes={scenes} />}
@@ -101,7 +178,7 @@ function App() {
         {scenes.length > 0 && (
           <div className="space-y-4">
             <h2 className="text-lg font-semibold text-slate-300">
-              Scènes ({scenes.length})
+              Scènes visuelles ({scenes.length})
             </h2>
             {scenes.map(scene => (
               <SceneCard key={scene.id} scene={scene} />
@@ -121,6 +198,13 @@ function App() {
       </main>
     </div>
   );
+}
+
+function StepBadge({ num, label, active, done }) {
+  const base = 'flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium transition-colors';
+  if (active) return <span className={`${base} bg-cyan-500/20 text-cyan-400`}>{num}. {label}</span>;
+  if (done) return <span className={`${base} bg-green-500/10 text-green-400`}>{num}. {label}</span>;
+  return <span className={`${base} bg-slate-800 text-slate-500`}>{num}. {label}</span>;
 }
 
 export default App;
