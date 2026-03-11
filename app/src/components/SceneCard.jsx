@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Search, Play, ExternalLink, Download, ChevronDown, ChevronUp, Loader2, AlertCircle, Tag, Sparkles, Film } from 'lucide-react';
+import { Search, Play, ExternalLink, Download, ChevronDown, ChevronUp, Loader2, AlertCircle, Tag, Sparkles, Film, Copy, Check } from 'lucide-react';
 import { getBestVideoFile } from '../lib/pexels-api';
 
 function SourceBadge({ source }) {
@@ -127,6 +127,27 @@ function VideoDetail({ video, onClose }) {
   );
 }
 
+function CopyButton({ text }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async (e) => {
+    e.stopPropagation();
+    await navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <button
+      onClick={handleCopy}
+      className="p-1 rounded hover:bg-slate-600/50 transition-colors text-slate-500 hover:text-slate-300"
+      title="Copier"
+    >
+      {copied ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
+    </button>
+  );
+}
+
 export default function SceneCard({ scene }) {
   const [expanded, setExpanded] = useState(true);
   const [selectedVideo, setSelectedVideo] = useState(null);
@@ -167,13 +188,19 @@ export default function SceneCard({ scene }) {
           {/* Narration */}
           {scene.narration && (
             <div className="bg-slate-800/80 rounded-lg p-3 border-l-2 border-cyan-500/50">
-              <p className="text-xs font-semibold text-cyan-400 mb-1">Narration</p>
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-xs font-semibold text-cyan-400">Narration</p>
+                <CopyButton text={scene.narration} />
+              </div>
               <p className="text-slate-300 text-sm leading-relaxed">{scene.narration}</p>
             </div>
           )}
 
           {/* Visual description */}
-          <p className="text-slate-400 text-sm leading-relaxed">{scene.content}</p>
+          <div className="flex items-start gap-2">
+            <p className="text-slate-400 text-sm leading-relaxed flex-1">{scene.content}</p>
+            <CopyButton text={scene.content} />
+          </div>
 
           {/* Keywords */}
           {scene.keywords.length > 0 && (
