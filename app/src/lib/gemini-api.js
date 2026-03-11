@@ -5,48 +5,40 @@ const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta';
  * Returns an object with { script, scenes } where scenes is an array of { number, content, keywords[] }.
  */
 export async function generateScriptAndScenes(apiKey, articleText) {
-  const prompt = `Tu es un expert en création de contenu vidéo YouTube. À partir de l'article suivant, génère :
+  const prompt = `Tu es un expert en création de contenu vidéo YouTube.
 
-1. Un **script audio** narratif pour une vidéo YouTube (ton engageant, fluide, adapté à l'oral)
-2. Des **scènes visuelles** correspondant au script, chaque scène décrivant ce qu'on voit à l'écran pendant la narration
-3. Pour chaque scène, des **mots-clés en anglais** (3 à 5) pour rechercher des vidéos stock sur Pexels
+OBJECTIF : Transformer l'article ci-dessous en un script vidéo COMPLET et DÉTAILLÉ de trois à cinq minutes de narration, découpé en scènes visuelles.
 
-Réponds UNIQUEMENT en JSON valide avec cette structure exacte (pas de markdown, pas de backticks) :
+IMPORTANT : Le script DOIT couvrir TOUT le contenu de l'article. Ne résume pas, développe chaque point. Le champ "script" doit contenir le texte intégral de la narration. Chaque scène contient un morceau de cette narration dans "narration".
+
+FORMAT DE SORTIE : JSON valide uniquement, sans markdown, sans backticks.
 {
-  "script": "Le texte complet du script audio...",
+  "script": "Le texte COMPLET et LONG du script audio, couvrant tout l'article...",
   "scenes": [
     {
       "number": 1,
-      "narration": "La partie du script audio correspondant à cette scène",
+      "narration": "Le morceau de narration pour cette scène. Plusieurs phrases.",
       "visual": "Description visuelle de ce qu'on voit à l'écran",
       "keywords": ["keyword1", "keyword2", "keyword3"]
     }
   ]
 }
 
-Règles :
-- Le script doit durer environ 3-5 minutes de narration
-- Génère entre 5 et 12 scènes
-- Les mots-clés doivent être en ANGLAIS pour la recherche Pexels
-- Les mots-clés doivent être concrets et visuels (pas de concepts abstraits)
-- Chaque scène doit avoir une description visuelle claire
+STRUCTURE :
+- Génère entre huit et douze scènes.
+- Chaque scène doit avoir trois à huit phrases de narration.
+- Le script total doit faire au minimum six cents mots.
+- Les mots-clés doivent être en ANGLAIS, concrets et visuels pour la recherche Pexels.
 
-Règles STRICTES pour le script audio (optimisé Text-to-Speech) :
-- Écris des phrases courtes et simples (max 20 mots par phrase)
-- Une seule idée par phrase, jamais de phrases à rallonge
-- Utilise le POINT (.) pour les fins de phrase — il crée une pause naturelle
-- Utilise la VIRGULE (,) uniquement pour des pauses courtes et nécessaires
-- Utilise les POINTS DE SUSPENSION (...) pour les pauses dramatiques ou les transitions
-- N'utilise JAMAIS de tirets (—, –), de barres obliques (/), de parenthèses () ou de crochets []
-- N'utilise JAMAIS d'abréviations : écris "c'est-à-dire" au lieu de "c.à.d", "numéro" au lieu de "n°", "pourcentage" au lieu de "%"
-- Écris tous les nombres EN TOUTES LETTRES : "trois millions" pas "3 000 000", "vingt-cinq" pas "25"
-- Écris les sigles lettre par lettre avec des points : "I.A." pas "IA", "O.N.U." pas "ONU"
-- N'utilise JAMAIS de caractères spéciaux : *, #, @, &, =, +, <, >
-- N'utilise JAMAIS de listes à puces ou numérotées dans le script
-- N'utilise JAMAIS de gras (**), d'italique ou de formatage markdown
-- Évite les mots difficiles à prononcer ou les termes trop techniques sans les expliquer
-- Préfère les mots courants et naturels à l'oral
-- Termine chaque segment de narration par un point final
+STYLE DE NARRATION (optimisé pour synthèse vocale) :
+- Phrases courtes, maximum vingt mots. Une idée par phrase.
+- Ponctuation simple : point final pour les pauses, virgule pour les courtes respirations, points de suspension pour les transitions dramatiques.
+- Aucun tiret, parenthèse, crochet, barre oblique.
+- Aucune abréviation. Écris les mots en entier : "c'est-à-dire" et non "c.à.d", "numéro" et non "n°".
+- Nombres en toutes lettres : "trois millions" et non "3 000 000".
+- Sigles épelés avec des points : "I.A." et non "IA".
+- Aucun caractère spécial, aucun formatage markdown, aucune liste à puces.
+- Ton engageant, fluide, naturel à l'oral.
 
 ARTICLE :
 ${articleText}`;
@@ -60,7 +52,7 @@ ${articleText}`;
         contents: [{ parts: [{ text: prompt }] }],
         generationConfig: {
           temperature: 0.7,
-          maxOutputTokens: 4096,
+          maxOutputTokens: 8192,
         },
       }),
     }
